@@ -28,12 +28,7 @@ module CarIPv6 extends StandardHost6
 {
     parameters:
         @networkNode();
-//        @display("i=car.png;bgb=400,518");		
 		@display("i=veins/node/car;bgb=400,518");
-
-
-        //# Mobility
-//        string mobilityType = default("VeinsInetMobility");
 
         //# Node specs
         string nodeType = "UE";  // DO NOT CHANGE
@@ -49,15 +44,11 @@ module CarIPv6 extends StandardHost6
         
         // Check if the car is D2D, if it is further check if it's mode4, otherwise it's a simple Ue
         string nicType = d2dCapable ? mode4D2D ? "LteNicVUeMode4" : "LteNicUeD2D" : "LteNicUe";
-//
-//    gates:
-//        input radioIn @directIn;     // connection to master
-
+		ipv6.xMIPv6Support = true;
+        ipv6.mipv6support.isMobileNode = true; //is Mobile Node
+    	ipv6.mipv6support.isHomeAgent = false; //is Home Agent
     submodules:
-//        mobility: <mobilityType> like IMobility {
-//            @display("p=50,175;is=s");
-//        }
-        
+
         appl: <applType> like lte.apps.mode4App.Mode4BaseApp {
             parameters:
                 @display("p=60,50");
@@ -77,8 +68,7 @@ module CarIPv6 extends StandardHost6
         lteNic.upperLayerOut --> appl.lowerGateIn;
         lteNic.upperLayerIn <-- appl.lowerGateOut;
 
-//        lteNic.radioIn <-- radioIn;
-        	for i=0..sizeof(radioIn)-1 {    
+    	for i=0..sizeof(radioIn)-1 {    
 			lteNic.radioIn <-- radioIn[i];
 		}
 }

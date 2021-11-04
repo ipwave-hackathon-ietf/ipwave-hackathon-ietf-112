@@ -35,7 +35,8 @@ simple Mode4App like Mode4BaseApp
         @signal[cbr];
         @statistic[cbr](title="Channel Busy Ratio"; unit=""; source="cbr"; record=vector);         
         @display("i=block/source");
+//        @display("t=Mode4Apppkt sent for awareness");
     gates:
         input lowerGateIn; // FROM NIC
-        output lowerGateOut;  // TO NIC
+        output lowerGateOut;  // TO NIC    
 }

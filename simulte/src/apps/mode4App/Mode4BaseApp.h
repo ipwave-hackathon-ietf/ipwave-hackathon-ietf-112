@@ -26,7 +26,8 @@
 
 #include "common/LteCommon.h"
 
-class Mode4BaseApp : public cSimpleModule {
+
+class Mode4BaseApp : public cSimpleModule{
 public:
 
 
@@ -91,6 +92,7 @@ protected:
      * @param pkt Packet to send
      */
     void sendLowerPackets(cPacket* pkt);
+
 
 };
 

@@ -44,12 +44,18 @@ void Mode4App::initialize(int stage)
         // Register the nodeId_ with the binder.
         binder_->setMacNodeId(nodeId_, nodeId_);
     } else if (stage==inet::INITSTAGE_APPLICATION_LAYER) {
+//      if (FindModule<VeinsInetMobility*>::findSubModule(getParentModule())) {
+//            mobility = VeinsInetMobilityAccess().get(getParentModule());
+//        }
+//        else {
+//            mobility = NULL;
+//        }
+
         selfSender_ = NULL;
         nextSno_ = 0;
 
         selfSender_ = new cMessage("selfSender");
-
-        size_ = par("packetSize");
+        ECMmsgTrigger = new cMessage ("ECMMsg");
         period_ = par("period");
         priority_ = par("priority");
         duration_ = par("duration");
@@ -60,7 +66,11 @@ void Mode4App::initialize(int stage)
         cbr_ = registerSignal("cbr");
 
         double delay = 0.001 * intuniform(0, 1000, 0);
+//        std::cout <<" Delay = " <<delay <<std::endl;
         scheduleAt((simTime() + delay).trunc(SIMTIME_MS), selfSender_);
+        if (std::strcmp(getParentModule()->getFullName(), "car[2]") == 0){
+            scheduleAt(simTime()+2, ECMmsgTrigger);
+        }
     }
 }
 
@@ -71,7 +81,17 @@ void Mode4App::handleLowerMessage(cMessage* msg)
         double channel_load = cbrPkt->getCbr();
         emit(cbr_, channel_load);
         delete cbrPkt;
-    } else {
+    }
+    else if(msg->isName("ECM")){
+//       std::cout << "ECM receivable <<------>> " <<std::endl;;
+        if (selfSender_->isScheduled()){
+            cancelEvent(selfSender_);
+        }
+        if (!ECMmsgTrigger->isScheduled()){
+            scheduleAt(simTime() + period_, ECMmsgTrigger);
+        }
+    }
+    else {
         AlertPacket* pkt = check_and_cast<AlertPacket*>(msg);
 
         if (pkt == 0)
@@ -90,32 +110,90 @@ void Mode4App::handleLowerMessage(cMessage* msg)
 
 void Mode4App::handleSelfMessage(cMessage* msg)
 {
-    if (!strcmp(msg->getName(), "selfSender")){
-        // Replace method
-        AlertPacket* packet = new AlertPacket("Alert");
-        packet->setTimestamp(simTime());
-        packet->setByteLength(size_);
-        packet->setSno(nextSno_);
+    bool flagOriginal = false;
+    if (flagOriginal){
+        if (!strcmp(msg->getName(), "selfSender")){
+            // Replace method
+            AlertPacket* packet = new AlertPacket("Alert");
+            packet->setTimestamp(simTime());
+            packet->setByteLength(size_);
+            packet->setSno(nextSno_);
 
-        nextSno_++;
+            nextSno_++;
 
-        auto lteControlInfo = new FlowControlInfoNonIp();
+            auto lteControlInfo = new FlowControlInfoNonIp();
 
-        lteControlInfo->setSrcAddr(nodeId_);
-        lteControlInfo->setDirection(D2D_MULTI);
-        lteControlInfo->setPriority(priority_);
-        lteControlInfo->setDuration(duration_);
-        lteControlInfo->setCreationTime(simTime());
+            lteControlInfo->setSrcAddr(nodeId_);
+            lteControlInfo->setDirection(D2D_MULTI);
+            lteControlInfo->setPriority(priority_);
+            lteControlInfo->setDuration(duration_);
+            lteControlInfo->setCreationTime(simTime());
 
-        packet->setControlInfo(lteControlInfo);
+            packet->setControlInfo(lteControlInfo);
 
-        Mode4BaseApp::sendLowerPackets(packet);
-        emit(sentMsg_, (long)1);
+            Mode4BaseApp::sendLowerPackets(packet);
+            emit(sentMsg_, (long)1);
 
-        scheduleAt(simTime() + period_, selfSender_);
+            scheduleAt(simTime() + period_, selfSender_);
+        }
+        else
+            throw cRuntimeError("Mode4App::handleMessage - Unrecognized self message");
     }
-    else
-        throw cRuntimeError("Mode4App::handleMessage - Unrecognized self message");
+    else{
+        if (msg == ECMmsgTrigger){
+            std::cout <<"ECM sent from "<< getParentModule()->getFullName() <<std::endl;
+            AlertPacket* packet = new AlertPacket("ECM");
+            packet->setTimestamp(simTime());
+            packet->setByteLength(size_);
+            packet->setSno(nextSno_);
+
+            nextSno_++;
+
+            auto lteControlInfo = new FlowControlInfoNonIp();
+
+            lteControlInfo->setSrcAddr(nodeId_);
+            lteControlInfo->setDirection(D2D_MULTI);
+            lteControlInfo->setPriority(priority_);
+            lteControlInfo->setDuration(duration_);
+            lteControlInfo->setCreationTime(simTime());
+
+            packet->setControlInfo(lteControlInfo);
+
+            Mode4BaseApp::sendLowerPackets(packet);
+            emit(sentMsg_, (long)1);
+            if (selfSender_->isScheduled()){
+                cancelEvent(selfSender_);
+            }
+            scheduleAt(simTime() + period_, ECMmsgTrigger);
+        }
+        else if (!strcmp(msg->getName(), "selfSender")){
+               // Replace method
+               std::cout <<"CCM from " << getParentModule()->getFullName() <<std::endl;
+               AlertPacket* packet = new AlertPacket("CCM");
+               packet->setTimestamp(simTime());
+               packet->setByteLength(size_);
+               packet->setSno(nextSno_);
+
+               nextSno_++;
+
+               auto lteControlInfo = new FlowControlInfoNonIp();
+
+               lteControlInfo->setSrcAddr(nodeId_);
+               lteControlInfo->setDirection(D2D_MULTI);
+               lteControlInfo->setPriority(priority_);
+               lteControlInfo->setDuration(duration_);
+               lteControlInfo->setCreationTime(simTime());
+
+               packet->setControlInfo(lteControlInfo);
+
+               Mode4BaseApp::sendLowerPackets(packet);
+               emit(sentMsg_, (long)1);
+
+               scheduleAt(simTime() + period_, selfSender_);
+           }
+           else
+               throw cRuntimeError("Mode4App::handleMessage - Unrecognized self message");
+    }
 }
 
 void Mode4App::finish()

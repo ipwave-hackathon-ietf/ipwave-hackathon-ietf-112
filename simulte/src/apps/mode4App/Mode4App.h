@@ -27,7 +27,7 @@
 #include "corenetwork/binder/LteBinder.h"
 #include "veins_inet/VeinsInetMobility.h"
 
-
+using veins::VeinsInetMobility;
 
 class Mode4App : public Mode4BaseApp {
 
@@ -48,6 +48,7 @@ protected:
     simsignal_t cbr_;
 
     cMessage *selfSender_;
+    cMessage* ECMmsgTrigger;
 
     LteBinder* binder_;
     MacNodeId nodeId_;
@@ -65,7 +66,6 @@ protected:
    void initialize(int stage);
 
    void handleLowerMessage(cMessage* msg);
-
 
    /**
     * Statistics recording
@@ -86,6 +86,7 @@ protected:
     * @param pkt Packet to send
     */
    void sendLowerPackets(cPacket* pkt);
+   VeinsInetMobility *mobility;
 
 };
 
